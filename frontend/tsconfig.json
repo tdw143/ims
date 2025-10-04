@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false, // 关闭JS兼容（强制TS）
+    "skipLibCheck": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true, // 开启严格类型检查
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true, // Vite负责编译，TS仅做类型检查
+    "jsx": "react-jsx", // React JSX支持
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"] // 路径别名（匹配Vite配置）
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/global.d.ts"],
+  "exclude": ["node_modules"]
+}

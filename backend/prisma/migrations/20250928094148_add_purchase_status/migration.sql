@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "public"."Purchase" ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'pending',
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

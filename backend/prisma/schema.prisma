@@ -1,0 +1,390 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Department {
+  id        String   @id @default(cuid()) @map("Did")
+  name      String   @map("DName")
+  contact   String?  @map("DContact")
+  managerId String?  @unique @map("Mid")  // 添加 unique 约束
+  phone     String?  @map("DTel")
+  email     String?  @map("DEmail")
+  note      String?  @map("DNote")
+  
+  // Relations
+  manager   Employee? @relation("DepartmentManager", fields: [managerId], references: [id])  // 改为可选
+  employees Employee[]
+  
+  @@map("Departments")
+}
+
+model Employee {
+  id          String   @id @default(cuid()) @map("EId")
+  name        String   @map("EName")
+  gender      String   @map("EGender") // 'M' or 'F'
+  birthDate   DateTime? @map("EBirth")
+  residence   String?  @map("EResidence")
+  idCard      String?  @map("EIdCard")
+  education   String?  @map("EEducation")
+  phone       String?  @map("EPhone")
+  email       String?  @map("EEmail")
+  entryDate   DateTime @map("EEntryDate")
+  type        String   @map("EType") // 'sales', 'purchase', 'warehouse'
+  departmentId String  @map("DId")
+  note        String?  @map("ENote")
+  
+  // Relations
+  department        Department      @relation(fields: [departmentId], references: [id])
+  managedDepartment Department?     @relation("DepartmentManager")  // 添加反向关系
+  user              User?           @relation("EmployeeUser")       // 添加反向关系
+  purchaseOrders    PurchaseOrder[]
+  salesOrders       SalesOrder[]
+  inboundOrders     InboundOrder[]
+  outboundOrders    OutboundOrder[]
+  
+  @@map("Employees")
+}
+
+model Customer {
+  id      String   @id @default(cuid()) @map("CId")
+  name    String   @map("CName")
+  gender  String?  @map("CGender") // 'M' or 'F'
+  phone   String   @map("CTel")
+  email   String?  @map("CEmail")
+  address String?  @map("CAddress")
+  note    String?  @map("CNote")
+  
+  // Relations
+  salesOrders    SalesOrder[]
+  outboundOrders OutboundOrder[]
+  
+  @@map("Customers")
+}
+
+model Supplier {
+  id       String   @id @default(cuid()) @map("SId")
+  name     String   @map("SName")
+  category String?  @map("SCategory")
+  address  String?  @map("SAddress")
+  contact  String?  @map("SContact")
+  phone    String   @map("STel")
+  email    String?  @map("SEmail")
+  note     String?  @map("SNote")
+  
+  // Relations
+  supplierProducts SupplierProduct[]
+  purchaseOrders   PurchaseOrder[]
+  
+  @@map("Suppliers")
+}
+
+model Product {
+  id         String    @id @default(cuid()) @map("PId")
+  name       String    @map("PName")
+  category   String    @map("PCategory")
+  brand      String?   @map("PBrand")
+  size       String?   @map("PSize")
+  unit       String    @map("PUnit")
+  color      String?   @map("PColor")
+  material   String?   @map("PMaterial")
+  costPrice  Float?    @map("PCostPrice")
+  sellPrice  Float?    @map("PSellPrice")
+  note       String?   @map("PNote")
+  
+  // Relations
+  supplierProducts   SupplierProduct[]
+  inventory          Inventory[]
+  purchaseOrderItems PurchaseOrderItem[]
+  salesOrderItems    SalesOrderItem[]
+  inboundOrderItems  InboundOrderItem[]
+  outboundOrderItems OutboundOrderItem[]
+  
+  @@map("Products")
+}
+
+model Warehouse {
+  id      String   @id @default(cuid()) @map("WId")
+  name    String   @map("WName")
+  address String?  @map("WAddress")
+  phone   String?  @map("WTel")
+  note    String?  @map("WNote")
+  
+  // Relations
+  inventory          Inventory[]
+  inboundOrderItems  InboundOrderItem[]
+  outboundOrderItems OutboundOrderItem[]
+  
+  @@map("Warehouses")
+}
+
+model Inventory {
+  productId   String @map("PId")
+  warehouseId String @map("WId")
+  currentQty  Int    @map("CurrentQty")
+  minQty      Int    @map("MinQty")
+  
+  // Relations
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  
+  @@id([productId, warehouseId])
+  @@map("Inventory")
+}
+
+model SupplierProduct {
+  supplierId   String  @map("SId")
+  productId    String  @map("PId")
+  lastPrice    Float?  @map("LastPrice")
+  supplyStatus String  @map("SupplyStatus") // 'active', 'inactive'
+  
+  // Relations
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+  
+  @@id([supplierId, productId])
+  @@map("Supplier_products")
+}
+
+model PurchaseOrder {
+  id           String    @id @default(cuid()) @map("POId")
+  employeeId   String    @map("EId")
+  supplierId   String    @map("SId")
+  orderDate    DateTime  @map("OrderDate")
+  expectDate   DateTime? @map("ExpectDate")
+  orderStatus  String    @map("OrderStatus") // 'pending', 'confirmed', 'completed', 'cancelled'
+  totalAmount  Float?    @map("TotalAmount")
+  note         String?   @map("PONote")
+  
+  // Relations
+  employee        Employee           @relation(fields: [employeeId], references: [id])
+  supplier        Supplier           @relation(fields: [supplierId], references: [id])
+  orderItems      PurchaseOrderItem[]
+  inboundOrders   InboundOrder[]
+  
+  @@map("Purchase_orders")
+}
+
+model PurchaseOrderItem {
+  purchaseOrderId String  @map("POId")
+  itemNo          Int     @map("ItemNo")
+  productId       String  @map("PId")
+  quantity        Int     @map("Quantity")
+  unitPrice       Float   @map("UnitPrice")
+  note            String? @map("ItemNote")
+  
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id])
+  
+  @@id([purchaseOrderId, itemNo])
+  @@map("Purchase_order_items")
+}
+
+model SalesOrder {
+  id           String    @id @default(cuid()) @map("SOId")
+  employeeId   String    @map("EId")
+  customerId   String    @map("CId")
+  orderDate    DateTime  @map("OrderDate")
+  expectDate   DateTime? @map("ExpectDate")
+  orderStatus  String    @map("OrderStatus") // 'pending', 'confirmed', 'shipped', 'completed', 'cancelled'
+  totalAmount  Float?    @map("TotalAmount")
+  note         String?   @map("SONote")
+  
+  // Relations
+  employee       Employee        @relation(fields: [employeeId], references: [id])
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  orderItems     SalesOrderItem[]
+  outboundOrders OutboundOrder[]
+  
+  @@map("Sales_orders")
+}
+
+model SalesOrderItem {
+  salesOrderId String  @map("SOId")
+  itemNo       Int     @map("ItemNo")
+  productId    String  @map("PId")
+  quantity     Int     @map("Quantity")
+  unitPrice    Float   @map("UnitPrice")
+  note         String? @map("ItemNote")
+  
+  // Relations
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+  product    Product    @relation(fields: [productId], references: [id])
+  
+  @@id([salesOrderId, itemNo])
+  @@map("Sales_order_items")
+}
+
+model InboundOrder {
+  id              String    @id @default(cuid()) @map("IOId")
+  purchaseOrderId String?   @map("POId")
+  employeeId      String    @map("EId")
+  inboundDate     DateTime  @map("InboundDate")
+  operateStatus   String    @map("OperateStatus") // 'processing', 'completed'
+  note            String?   @map("IONote")
+  
+  // Relations
+  purchaseOrder PurchaseOrder?  @relation(fields: [purchaseOrderId], references: [id])
+  employee      Employee        @relation(fields: [employeeId], references: [id])
+  orderItems    InboundOrderItem[]
+  
+  @@map("Inbound_orders")
+}
+
+model InboundOrderItem {
+  inboundOrderId String  @map("IOId")
+  itemNo         Int     @map("ItemNo")
+  productId      String  @map("PId")
+  warehouseId    String  @map("WId")
+  quantity       Int     @map("Quantity")
+  batchNo        String? @map("BatchNo")
+  note           String? @map("ItemNote")
+  
+  // Relations
+  inboundOrder InboundOrder @relation(fields: [inboundOrderId], references: [id])
+  product      Product      @relation(fields: [productId], references: [id])
+  warehouse    Warehouse    @relation(fields: [warehouseId], references: [id])
+  
+  @@id([inboundOrderId, itemNo])
+  @@map("Inbound_order_items")
+}
+
+model OutboundOrder {
+  id             String    @id @default(cuid()) @map("OOId")
+  salesOrderId   String?   @map("SOId")
+  employeeId     String    @map("EId")
+  customerId     String    @map("CId")
+  outboundDate   DateTime  @map("OutboundDate")
+  trackingNo     String?   @map("TrackingNo")
+  operateStatus  String    @map("OperateStatus") // 'processing', 'shipped', 'completed'
+  note           String?   @map("OONote")
+  
+  // Relations
+  salesOrder   SalesOrder?     @relation(fields: [salesOrderId], references: [id])
+  employee     Employee        @relation(fields: [employeeId], references: [id])
+  customer     Customer        @relation(fields: [customerId], references: [id])
+  orderItems   OutboundOrderItem[]
+  
+  @@map("Outbound_orders")
+}
+
+model OutboundOrderItem {
+  outboundOrderId String  @map("OOId")
+  itemNo          Int     @map("ItemNo")
+  productId       String  @map("PId")
+  warehouseId     String  @map("WId")
+  quantity        Int     @map("Quantity")
+  note            String? @map("ItemNote")
+  
+  // Relations
+  outboundOrder OutboundOrder @relation(fields: [outboundOrderId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id])
+  warehouse     Warehouse     @relation(fields: [warehouseId], references: [id])
+  
+  @@id([outboundOrderId, itemNo])
+  @@map("Outbound_order_items")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  email     String?
+  employeeId String? @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  employee Employee? @relation("EmployeeUser", fields: [employeeId], references: [id])  // 添加关系名称
+  userRoles UserRole[]
+  systemLogs SystemLog[]  // 添加反向关系
+  
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  userRoles UserRole[]
+  rolePermissions RolePermission[]
+  
+  @@map("roles")
+}
+
+model UserRole {
+  userId String
+  roleId String
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+  
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  module      String
+  action      String
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  rolePermissions RolePermission[]
+  
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+  
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model SystemLog {
+  id          String   @id @default(cuid())
+  level       String   // info, warn, error, debug
+  module      String   // 模块名称
+  action      String   // 操作动作
+  message     String   // 日志消息
+  userId      String?  // 关联用户ID
+  userAgent   String?  // 用户代理
+  ipAddress   String?  // IP地址
+  requestData Json?    // 请求数据
+  responseData Json?   // 响应数据
+  errorStack  String?  // 错误堆栈
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])  // 关系已完整
+
+  @@map("system_logs")
+  @@index([level])
+  @@index([module])
+  @@index([createdAt])
+}
